@@ -2,6 +2,6 @@
 
 using namespace cv;
 
-Mat mycv::estimateRigidTransform(InputArray src, InputArray dst, bool fullAffine) {
+Mat mycv::estimateRigidTransform(vector<Point2f> src, vector<Point2f> dst, bool fullAffine) {
 	return cv::estimateRigidTransform(src, dst, fullAffine);
 }

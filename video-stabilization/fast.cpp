@@ -2,7 +2,7 @@
 
 using namespace cv;
 
-void mycv::goodFeaturesToTrack(InputArray image, OutputArray corners,
+void mycv::goodFeaturesToTrack(Mat image, vector<Point2f>& corners,
 	int maxCorners, double qualityLevel, double minDistance,
 	InputArray mask, int blockSize, bool useHarrisDetector, double k) {
 
