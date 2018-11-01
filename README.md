@@ -17,4 +17,5 @@ OPENCV_RELEASE_DEPENDENCY=opencv_world310.lib; //세미콜론 무조건 있어�
 ```
 
 ![Environment-Variables](./img/environment_variables.png)
+![Debug-Setting](./img/debug_setting.png)
 
