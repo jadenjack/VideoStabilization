@@ -149,12 +149,12 @@
     <ClCompile Include="fast.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ransac.cpp" />
-    <ClCompile Include="sift.cpp" />
+    <ClCompile Include="lucas.cpp" />
     <ClCompile Include="smoothing.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fast.h" />
-    <ClInclude Include="sift.h" />
+    <ClInclude Include="lucas.h" />
     <ClInclude Include="mystab.h" />
     <ClInclude Include="ransac.h" />
     <ClInclude Include="smoothing.h" />
