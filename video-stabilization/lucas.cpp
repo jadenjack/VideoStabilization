@@ -10,50 +10,78 @@ void mycv::calcOpticalFlowPyrLK(Mat prevImg, Mat nextImg,
 	vector<uchar>& status, vector<float>& err,
 	Size winSize, int maxLevel,
 	TermCriteria criteria, int flags, double minEigThreshold) {
-	
-	vector<Mat> prevImgs, nextImgs;
-	prevImgs.push_back(prevImg);
-	nextImgs.push_back(nextImg);
 
-	for (int i = 1; i <= maxLevel; i++) {
-		prevImgs.push_back(nextFloor(prevImgs[i - 1]));
-		nextImgs.push_back(nextFloor(nextImgs[i - 1]));
+	const int height = prevImg.rows;
+	const int width = prevImg.cols;
+	const int frame_len = height * width;
+	const unsigned char* prev = prevImg.data;
+	const unsigned char* next = nextImg.data;
+
+	int* Ix = new int[frame_len]();
+	int* Iy = new int[frame_len]();
+	int* It = new int[frame_len]();
+
+	for (int y = 1; y < height; y++) {
+		for (int x = 1; x < width; x++) {
+			const int idx = y * width + x;
+			const int prevDx = (int)prev[idx + 1] - (int)prev[idx - 1];
+			const int nextDx = (int)next[idx + 1] - (int)next[idx - 1];
+			const int prevDy = (int)prev[idx + width] - (int)prev[idx - width];
+			const int nextDy = (int)next[idx + width] - (int)next[idx - width];
+
+			Ix[idx] = (prevDx + nextDx) * 0.5;
+			Iy[idx] = (prevDy + nextDy) * 0.5;
+			It[idx] = (int)next[idx] - (int)prev[idx];
+		}
 	}
 
 	for (int p = 0; p < prevPts.size(); p++) {
-		vector<Point2f> guesses(maxLevel+1, Point2f(0, 0));
-		const Point2f prevPt = prevPts[p];
-		
-		for (int L = maxLevel; L >= 0; L--) {
-			const Point2f localPrevPt(prevPt / pow(2, L));
+		const Point2f pt = prevPts[p];
+		float sumxx = 0;
+		float sumxy = 0;
+		float sumyy = 0;
+		float sumxt = 0;
+		float sumyt = 0;
+		bool isMatched = true;
 
-		}
-	}
+		for (int wy = -winSize.height / 2; wy <= winSize.height / 2; wy++) {
+			for (int wx = -winSize.width / 2; wx <= winSize.width / 2; wx++) {
+				const int x = pt.x + wx;
+				const int y = pt.y + wy;
+				const int idx = y * width + x;
 
-	cv::calcOpticalFlowPyrLK(prevImg, nextImg, prevPts, nextPts, status, err, winSize, maxLevel, criteria, flags, minEigThreshold);
-}
-
-Mat nextFloor(const Mat img) {
-	const int rows = (img.rows / 2) % 2 ? img.rows / 2 - 1 : img.rows / 2;
-	const int cols = (img.cols / 2) % 2 ? img.cols / 2 - 1 : img.cols / 2;
-	Mat next = Mat::zeros(rows, cols, img.type());
-
-	for (int y = 0; y < rows; y++) {
-		for (int x = 0; x < cols; x++) {
-			int sum = 0;
-			int weight = 0;
-			for (int py = -PAD; py < PAD; py++) {
-				for (int px = -PAD; px < PAD; px++) {
-					const int r = 2*y + py;
-					const int c = 2*x + px;
-					if (r >= 0 && r < img.rows && c >= 0 && c < img.cols) {
-						sum += img.at<unsigned char>(r, c) * lowpass_filter[PAD + py][PAD + px];
-						weight += lowpass_filter[PAD + py][PAD + px];
-					}
+				if (idx < 0 || idx >= frame_len) {
+					isMatched = false;
+					break;
 				}
+				sumxx += Ix[idx] * Ix[idx];
+				sumxy += Ix[idx] * Iy[idx];
+				sumyy += Iy[idx] * Iy[idx];
+				sumxt += Ix[idx] * It[idx];
+				sumyt += Iy[idx] * It[idx];
 			}
-			next.at<unsigned char>(y, x) = sum / weight;
 		}
+
+		const float G[2][2] = {
+			{sumxx, sumxy},
+			{sumxy, sumyy}
+		};
+
+		const float det = G[0][0] * G[1][1] - G[0][1] * G[1][0];
+		if (!isMatched || (det) < criteria.epsilon) {
+			nextPts.push_back(pt);
+			status.push_back(0);
+			continue;
+		}
+
+		const float vx = (-sumyy * sumxt + sumxy * sumyt) / det;
+		const float vy = (-sumxy * sumxt - sumxx * sumyt) / det;
+
+		nextPts.push_back(pt + Point2f(vx, vy));
+		status.push_back(1);
 	}
-	return next;
+
+	delete[] Ix;
+	delete[] Iy;
+	delete[] It;
 }
