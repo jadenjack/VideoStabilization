@@ -27,10 +27,10 @@
     <ClCompile Include="ransac.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="sift.cpp">
+    <ClCompile Include="smoothing.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="smoothing.cpp">
+    <ClCompile Include="lucas.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -41,13 +41,13 @@
     <ClInclude Include="fast.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="sift.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="ransac.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="smoothing.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="lucas.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
