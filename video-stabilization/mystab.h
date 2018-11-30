@@ -50,6 +50,9 @@ namespace mycv {
 		TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 0.01),
 		int flags = 0, double minEigThreshold = 1e-4);
 
+	void extractInliers(const vector<Point2f>& previousFeaturesIn, const vector<Point2f>& currentFeaturesIn,
+						vector<Point2f>* previousInliersOut, vector<Point2f>* currentInliersOut);
+
 	Mat estimateRigidTransform(vector<Point2f> src, vector<Point2f> dst, bool fullAffine);
 
 	void warpAffine(Mat src, Mat& dst,
