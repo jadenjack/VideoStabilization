@@ -54,6 +54,10 @@ namespace mycv {
 						vector<Point2f>* previousInliersOut, vector<Point2f>* currentInliersOut);
 
 	Mat estimateRigidTransform(vector<Point2f> src, vector<Point2f> dst, bool fullAffine);
+	void plot(const vector<Point2f>& previousFeaturesIn, 
+		const vector<Point2f>& currentFeaturesIn,
+		const int* inliersIndices, int inliersCount,
+		Mat xCoef, Mat yCoef);
 
 	void warpAffine(Mat src, Mat& dst,
 		Mat M, Size dsize,

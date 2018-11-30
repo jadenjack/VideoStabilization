@@ -168,7 +168,7 @@ void mycv::extractInliers(const vector<Point2f>& previousFeaturesIn, const vecto
 	delete testInliers;
 }
 
-void plot(const vector<Point2f>& previousFeaturesIn, const vector<Point2f>& currentFeaturesIn,
+void mycv::plot(const vector<Point2f>& previousFeaturesIn, const vector<Point2f>& currentFeaturesIn,
 		const int* inliersIndices, int inliersCount,
 		Mat xCoef, Mat yCoef) {
 	const int dataCount = previousFeaturesIn.size();
