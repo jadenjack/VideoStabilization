@@ -20,8 +20,22 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <fstream>
 #include "mystab.h"
 
+// WinUser.h include시 에러 발생
+#define KEY_SPACE 0x20
+#define KEY_LEFT 0x250000
+#define KEY_UP 0x260000
+#define KEY_RIGHT 0x270000
+#define KEY_DOWN 0x280000
+
+#define MAX_WIDTH 800
+#define MAX_HEIGHT 400
+
+
 using namespace std;
 using namespace cv;
+
+void pause();
+
 
 // This video stablisation smooths the global trajectory using a sliding average window
 
@@ -31,8 +45,6 @@ using namespace cv;
 // 3. Smooth out the trajectory using an averaging window
 // 4. Generate new set of previous to current transform, such that the trajectory ends up being the same as the smoothed trajectory
 // 5. Apply the new transformation to the video
-
-
 int main(int argc, char **argv)
 {
 	string inputPath = "hippo.mp4";
@@ -82,12 +94,15 @@ int main(int argc, char **argv)
 		mycv::calcOpticalFlowPyrLK(prev_grey, cur_grey, prev_corner, cur_corner, status, err);
 
 		// weed out bad matches
-		for (size_t i = 0; i < status.size(); i++) {
+		/*for (size_t i = 0; i < status.size(); i++) {
 			if (status[i]) {
 				prev_corner2.push_back(prev_corner[i]);
 				cur_corner2.push_back(cur_corner[i]);
 			}
-		}
+		}*/
+
+		// weed out bad matches
+		mycv::extractInliers(prev_corner, cur_corner, &prev_corner2, &cur_corner2);
 
 		// translation + rotation only
 		Mat T = mycv::estimateRigidTransform(prev_corner2, cur_corner2, false); // false = rigid transform, no scaling/shearing
@@ -195,6 +210,7 @@ int main(int argc, char **argv)
 
 	int vert_border = HORIZONTAL_BORDER_CROP * prev.rows / prev.cols; // get the aspect ratio correct
 
+	vector<Mat> canvases;
 	k = 0;
 	while (k < max_frames - 1) { // don't process the very last frame, no valid transform
 		cap >> cur;
@@ -213,7 +229,7 @@ int main(int argc, char **argv)
 
 		Mat cur2;
 
-		mycv::warpAffine(cur, cur2, T, cur.size());
+		mycv::warpAffine(cur, cur2, T, cur.size(), 1, BORDER_REFLECT101);
 
 		cur2 = cur2(Range(vert_border, cur2.rows - vert_border), Range(HORIZONTAL_BORDER_CROP, cur2.cols - HORIZONTAL_BORDER_CROP));
 
@@ -231,16 +247,75 @@ int main(int argc, char **argv)
 			mycv::resize(canvas, canvas, Size(canvas.cols / 2, canvas.rows / 2));
 		}
 
-		imshow("before and after", canvas);
+		canvases.push_back(canvas.clone());
 
 		//char str[256];
 		//sprintf(str, "images/%08d.jpg", k);
 		//imwrite(str, canvas);
 
-		waitKey(20);
-
 		k++;
 	}
+	
+	/*
+	* 영상 반복 재생
+	* SPACE:		일시정지/재생
+	* 좌/우 방향키:	프레임 조절 (일시정지 후에 사용해)
+	* 상/하 방향키:	재생 속도 조절
+	*/
+	int n = 0;
+	int delay = 20;
+	int fps = 1000.0 / delay;
+	bool isPaused = false;
+	while (true) {
+		char title[40];
+		sprintf(title ,"[%s]:\t%d/%d, %dfps", isPaused ? "일시정지" : "재생 중", n+1, max_frames-1, fps);
+		imshow("init", canvases[n]);
+		setWindowTitle("init", title);
+		
+		int key = waitKeyEx(delay);
+		switch (key) {
+		case KEY_SPACE:
+			isPaused = !isPaused;
+			break;
+		case KEY_LEFT:
+			n -= 1;
+			break;
+		case KEY_RIGHT:
+			n += 1;
+			break;
+		case KEY_UP:
+			delay -= 1;
+			fps = 1000.0 / delay;
+			break;
+		case KEY_DOWN:
+			delay += 1;
+			fps = 1000.0 / delay;
+			break;
+		case -1:
+			break;
+		default:
+			cout << key<< "," <<hex << key << endl;
+		}
+
+		if (!isPaused) {
+			++n;
+		}
+
+		if (n >= max_frames - 1) {
+			n = 0;
+		}
+		else if (n < 0) {
+			n = 0;
+		}
+	}
+
 
 	return 0;
+}
+
+void pause() {
+	int key = waitKey();
+	if (key == 32) {
+		return;
+	}
 }
