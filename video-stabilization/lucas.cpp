@@ -11,77 +11,87 @@ void mycv::calcOpticalFlowPyrLK(Mat prevImg, Mat nextImg,
 	Size winSize, int maxLevel,
 	TermCriteria criteria, int flags, double minEigThreshold) {
 
-	const int height = prevImg.rows;
 	const int width = prevImg.cols;
-	const int frame_len = height * width;
-	const unsigned char* prev = prevImg.data;
-	const unsigned char* next = nextImg.data;
+	const int height = prevImg.rows;
+	const int frameSize = width * height;
+	const unsigned char* prevData = prevImg.data;
+	const unsigned char* nextData = nextImg.data;
 
-	int* Ix = new int[frame_len]();
-	int* Iy = new int[frame_len]();
-	int* It = new int[frame_len]();
+	vector<double> Ix(frameSize);
+	vector<double> Iy(frameSize);
 
-	for (int y = 1; y < height; y++) {
-		for (int x = 1; x < width; x++) {
+	for (int y = 1; y < height - 1; y++) {
+		for (int x = 1; x < width - 1; x++) {
 			const int idx = y * width + x;
-			const int prevDx = (int)prev[idx + 1] - (int)prev[idx - 1];
-			const int nextDx = (int)next[idx + 1] - (int)next[idx - 1];
-			const int prevDy = (int)prev[idx + width] - (int)prev[idx - width];
-			const int nextDy = (int)next[idx + width] - (int)next[idx - width];
-
-			Ix[idx] = (prevDx + nextDx) * 0.5;
-			Iy[idx] = (prevDy + nextDy) * 0.5;
-			It[idx] = (int)next[idx] - (int)prev[idx];
+			Ix[idx] = 0.5 * ((int)prevData[idx + 1] - (int)prevData[idx - 1]);
+			Iy[idx] = 0.5 * ((int)prevData[idx + width] - (int)prevData[idx - width]);
 		}
 	}
 
 	for (int p = 0; p < prevPts.size(); p++) {
-		const Point2f pt = prevPts[p];
-		float sumxx = 0;
-		float sumxy = 0;
-		float sumyy = 0;
-		float sumxt = 0;
-		float sumyt = 0;
-		bool isMatched = true;
+		const Point2f from = prevPts[p];
+		Point2f optFlowVector(0, 0);
+		double G[2][2] = {
+			{0, 0},
+			{0, 0}
+		};
 
-		for (int wy = -winSize.height / 2; wy <= winSize.height / 2; wy++) {
-			for (int wx = -winSize.width / 2; wx <= winSize.width / 2; wx++) {
-				const int x = pt.x + wx;
-				const int y = pt.y + wy;
-				const int idx = y * width + x;
+		for (int wy = -winSize.height; wy <= winSize.height; wy++) {
+			for (int wx = -winSize.width; wx <= winSize.width; wx++) {
+				const int y = from.y + wy;
+				const int x = from.x + wx;
 
-				if (idx < 0 || idx >= frame_len) {
-					isMatched = false;
-					break;
+				if (x < 0 || width <= x || y < 0 || height <= y) {
+					continue;
 				}
-				sumxx += Ix[idx] * Ix[idx];
-				sumxy += Ix[idx] * Iy[idx];
-				sumyy += Iy[idx] * Iy[idx];
-				sumxt += Ix[idx] * It[idx];
-				sumyt += Iy[idx] * It[idx];
+
+				const int idx = y * width + x;
+				G[0][0] += Ix[idx] * Ix[idx];
+				G[0][1] += Ix[idx] * Iy[idx];
+				G[1][0] += Ix[idx] * Iy[idx];
+				G[1][1] += Iy[idx] * Iy[idx];
 			}
 		}
 
-		const float G[2][2] = {
-			{sumxx, sumxy},
-			{sumxy, sumyy}
+		const double det = G[0][0] * G[1][1] - G[0][1] * G[1][0];
+		const double InvG[2][2] = {
+			{G[1][1] / det, -G[0][1] / det},
+			{-G[1][0] / det, G[0][0] / det}
 		};
 
-		const float det = G[0][0] * G[1][1] - G[0][1] * G[1][0];
-		if (!isMatched || (det) < criteria.epsilon) {
-			nextPts.push_back(pt);
-			status.push_back(0);
-			continue;
+		for (int i = 0; i < criteria.maxCount; i++) {
+			Point2f mismatch(0, 0);
+
+			for (int wy = -winSize.height; wy <= winSize.height; wy++) {
+				for (int wx = -winSize.width; wx <= winSize.width; wx++) {
+					const int fy = from.y + wy;
+					const int fx = from.x + wx;
+					const int ty = from.y + wy + optFlowVector.y;
+					const int tx = from.x + wx + optFlowVector.x;
+
+					if (fx < 0 || width <= fx || fy < 0 || height <= fy
+						|| tx < 0 || width <= tx || ty < 0 || height <= ty) {
+						continue;
+					}
+
+					const int diff = (int)prevData[fy * width + fx] - (int)nextData[ty * width + tx];
+					mismatch.y += diff * Iy[fy * width + fx];
+					mismatch.x += diff * Ix[fy * width + fx];
+				}
+			}
+
+			const Point2f gap(InvG[0][0] * mismatch.x + InvG[0][1] * mismatch.y, InvG[1][0] * mismatch.x + InvG[0][1] * mismatch.y);
+			optFlowVector += gap;
+			
+			const double norm = sqrt(gap.x * gap.x + gap.y * gap.y);
+			if (norm < criteria.epsilon) {
+				break;
+			}
 		}
 
-		const float vx = (-sumyy * sumxt + sumxy * sumyt) / det;
-		const float vy = (-sumxy * sumxt - sumxx * sumyt) / det;
-
-		nextPts.push_back(pt + Point2f(vx, vy));
-		status.push_back(1);
+		const Point2f to = from + optFlowVector;
+		const bool isInsideFrame = 0 <= to.x && to.x < width && 0 <= to.y && to.y < height;
+		nextPts.push_back(to);
+		status.push_back(isInsideFrame);
 	}
-
-	delete[] Ix;
-	delete[] Iy;
-	delete[] It;
 }
