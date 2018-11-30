@@ -46,7 +46,7 @@ namespace mycv {
 	void calcOpticalFlowPyrLK(Mat prevImg, Mat nextImg,
 		vector<Point2f> prevPts, vector<Point2f>& nextPts,
 		vector<uchar>& status, vector<float>& err,
-		Size winSize = Size(11, 11), int maxLevel = 3,
+		Size winSize = Size(21, 21), int maxLevel = 3,
 		TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 0.01),
 		int flags = 0, double minEigThreshold = 1e-4);
 
