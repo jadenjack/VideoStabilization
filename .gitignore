@@ -366,3 +366,14 @@ ASALocalRun/
 # Local History for Visual Studio
 .localhistory/
 
+# videos
+*.wmv
+*.mpg
+*.mpeg
+*.mp4
+*.mov
+*.flv
+*.avi
+*.ogv
+*.ogg
+*.webm
