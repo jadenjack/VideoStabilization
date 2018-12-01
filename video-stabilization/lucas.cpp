@@ -5,6 +5,23 @@
 using namespace cv;
 using namespace std;
 
+int mycv::calcMaximumLevel(const Mat img, const Size winSize, const int hopeThisLevel) {
+	const int width = img.cols;
+	const int height = img.rows;
+	const int searchWidth = 2 * winSize.width + 1;
+	const int searchHeight = 2 * winSize.height + 1;
+
+	for (int l = hopeThisLevel; l > 0; l--) {
+		const int w = width >> l;
+		const int h = height >> l;
+
+		if (w >= 2 * searchWidth && h >= 2 * searchHeight) {
+			return l;
+		}
+	}
+	return 0;
+}
+
 Mat mycv::resizeForPyramid(const Mat src, const int maxLevel) {
 	const int rest = 1 << maxLevel;
 	const int width = src.cols - src.cols % rest;
@@ -60,6 +77,8 @@ void mycv::calcOpticalFlowPyrLK(Mat prevImg, Mat nextImg,
 	vector<uchar>& status, vector<float>& err,
 	Size winSize, int maxLevel,
 	TermCriteria criteria, int flags, double minEigThreshold) {
+
+	maxLevel = calcMaximumLevel(prevImg, winSize, maxLevel);
 
 	vector<Mat> prevImgs;
 	vector<Mat> nextImgs;
@@ -128,7 +147,7 @@ void mycv::calcOpticalFlowPyrLK(Mat prevImg, Mat nextImg,
 			guess = Point2f(0, 0);
 			Point2f optFlowVector(0, 0);
 			calcOpticalFlowLK(img, nextImgs[0], Ix[0], Iy[0], from, guess, optFlowVector, winSize, criteria);
-			to = from + guess;
+			to = from + guess + optFlowVector;
 			isInsideFrame = 0 <= to.x && to.x < img.cols && 0 <= to.y && to.y < img.rows;
 		}
 

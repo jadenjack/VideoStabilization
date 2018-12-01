@@ -8,6 +8,8 @@ namespace mycv {
 		const Point2f from, const Point2f guess, Point2f& optFlowVector,
 		Size winSize, TermCriteria criteria);
 	
+	int calcMaximumLevel(const Mat img, const Size winSize, const int hopeThisLevel);
+
 	Mat resizeForPyramid(const Mat src, const int maxLevel);
 
 	Mat makeNextLevelImage(const Mat src);
