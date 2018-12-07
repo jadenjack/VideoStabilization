@@ -20,7 +20,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <fstream>
 #include "mystab.h"
 
-// WinUser.h include시 에러 발생
 #define KEY_SPACE 0x20
 #define KEY_LEFT 0x250000
 #define KEY_UP 0x260000
@@ -33,9 +32,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 using namespace std;
 using namespace cv;
-
-void pause();
-
 
 // This video stablisation smooths the global trajectory using a sliding average window
 
@@ -94,15 +90,12 @@ int main(int argc, char **argv)
 		mycv::calcOpticalFlowPyrLK(prev_grey, cur_grey, prev_corner, cur_corner, status, err);
 
 		// weed out bad matches
-		/*for (size_t i = 0; i < status.size(); i++) {
+		for (size_t i = 0; i < status.size(); i++) {
 			if (status[i]) {
 				prev_corner2.push_back(prev_corner[i]);
 				cur_corner2.push_back(cur_corner[i]);
 			}
-		}*/
-
-		// weed out bad matches
-		mycv::extractInliers(prev_corner, cur_corner, &prev_corner2, &cur_corner2);
+		}
 
 		// translation + rotation only
 		Mat T = mycv::estimateRigidTransform(prev_corner2, cur_corner2, false); // false = rigid transform, no scaling/shearing
@@ -291,8 +284,6 @@ int main(int argc, char **argv)
 			delay += 1;
 			fps = 1000.0 / delay;
 			break;
-		case -1:
-			break;
 		default:
 			cout << key<< "," <<hex << key << endl;
 		}
@@ -309,13 +300,5 @@ int main(int argc, char **argv)
 		}
 	}
 
-
 	return 0;
-}
-
-void pause() {
-	int key = waitKey();
-	if (key == 32) {
-		return;
-	}
 }

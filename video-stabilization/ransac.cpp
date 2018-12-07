@@ -2,20 +2,11 @@
 
 using namespace cv;
 
-//Mat mycv::estimateRigidTransform(vector<Point2f> src, vector<Point2f> dst, bool fullAffine) {
-//
-//	return cv::estimateRigidTransform(src, dst, fullAffine);
-//}
-
-void plot(const vector<Point2f>& previousFeaturesIn, const vector<Point2f>& currentFeaturesIn,
-	const int* inliersIndices, int inliersCount,
-	Mat xCoef, Mat yCoef);
-
 Mat mycv::estimateRigidTransform(vector<Point2f> src, vector<Point2f> dst, bool fullAffine) {
-	
-	assert(src.size() == dst.size());
+	vector<Point2f> src2, dst2;
+	mycv::extractInliers(src, dst, &src2, &dst2);
 
-	const int pairCount = src.size();
+	const int pairCount = src2.size();
 	Mat srcMat(pairCount * 2, 4, CV_32FC1);
 	Mat dstVec(pairCount * 2, 1, CV_32FC1);
 
@@ -23,13 +14,13 @@ Mat mycv::estimateRigidTransform(vector<Point2f> src, vector<Point2f> dst, bool 
 	Mat* dstVecArray = new Mat[pairCount];
 	for (int i = 0; i < pairCount; ++i) {
 		srcMatArray[i] = (Mat_<float>(2, 4) 
-			<< src.at(i).x, -src.at(i).y,  1,  0,
-			   src.at(i).y,  src.at(i).x,  0,  1
+			<< src2.at(i).x, -src2.at(i).y,  1,  0,
+			   src2.at(i).y,  src2.at(i).x,  0,  1
 			);
 
 		dstVecArray[i] = (Mat_<float>(2, 1)
-			<< dst.at(i).x, 
-			   dst.at(i).y
+			<< dst2.at(i).x, 
+			   dst2.at(i).y
 			);
 	}
 	vconcat(srcMatArray, pairCount, srcMat);
@@ -62,36 +53,7 @@ void mycv::extractInliers(const vector<Point2f>& previousFeaturesIn, const vecto
 	const int sampleCount = orderOfPolynomials+1;
 	const int dataCount = previousFeaturesIn.size();
 
-	// calculate good threshold
-	float th = 3;
-#pragma region 
-	/*float xMean = 0.0;
-	float yMean = 0.0;
-	int pointsCount = src.size();
-
-
-	for (int i = 0; i < pointsCount; ++i) {
-		xMean += src[i].x;
-		yMean += src[i].y;
-	}
-	xMean /= pointsCount;
-	yMean /= pointsCount;
-
-	float xVariance = 0.0;
-	float yVariance = 0.0;
-
-	for (int i = 0; i < pointsCount; ++i) {
-		xVariance += (src[i].x - xMean)*(src[i].x - xMean);
-		yVariance += (src[i].y - yMean)*(src[i].y - yMean);
-	}
-
-	const float xDev = sqrt(xVariance);
-	const float yDev = sqrt(yVariance);
-
-	*xThreshold = 2 * xDev;
-	*yThreshold = 2 * yDev;*/
-#pragma endregion
-
+	float th = 10;
 	int inliersCount = 0;
 	Mat finalXCoef(3, 1, CV_64F);
 	Mat finalYCoef(3, 1, CV_64F);
@@ -99,7 +61,6 @@ void mycv::extractInliers(const vector<Point2f>& previousFeaturesIn, const vecto
 	int *bestInliers = new int[dataCount];
 	int *testInliers = new int[dataCount];
 	
-
 	int iter = 0;
 	int maxIter = 9999999;
 	while( ++iter && iter < maxIter && iter < MAX_ITERATION) {
@@ -109,7 +70,6 @@ void mycv::extractInliers(const vector<Point2f>& previousFeaturesIn, const vecto
 		Mat inY(3, 3, CV_64F);
 		Mat outY(3, 1, CV_64F);
 
-		//
 		int index[] = { rand() % dataCount, rand() % dataCount, rand() % dataCount };
 		for (int i = 0; i < 3; ++i) {
 			double xRow[] = { pow(currentFeaturesIn[index[i]].x,2), currentFeaturesIn[index[i]].x, 1 };
@@ -161,11 +121,11 @@ void mycv::extractInliers(const vector<Point2f>& previousFeaturesIn, const vecto
 		previousInliersOut->push_back(previousFeaturesIn[bestInliers[i]]);
 		currentInliersOut->push_back(currentFeaturesIn[bestInliers[i]]);
 	}
-	cout << "#iteration: " << iter << " / "<<dataCount << "->" << inliersCount << endl;
+	//cout << "#iteration: " << iter << " / "<<dataCount << "->" << inliersCount << endl;
 	//plot(previousFeaturesIn, currentFeaturesIn, bestInliers, inliersCount, finalXCoef, finalYCoef);
 
-	delete bestInliers;
-	delete testInliers;
+	delete[] bestInliers;
+	delete[] testInliers;
 }
 
 void mycv::plot(const vector<Point2f>& previousFeaturesIn, const vector<Point2f>& currentFeaturesIn,
