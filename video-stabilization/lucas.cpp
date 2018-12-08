@@ -5,6 +5,13 @@
 using namespace cv;
 using namespace std;
 
+/*
+	subimage의 크기가 최소한 (2 * window + 1)이 되도록 피라미드 레벨 조정 
+
+	subimage의 크기가 window 크기의 두배 이하로 작아질 경우
+	guess의 값이 영상에 비해 급격히 커지면서 정확한 값을 찾을 수 없는 문제로 인해
+	입력 영상의 최대 피라미드 크기를 조절.
+*/
 int mycv::calcMaximumLevel(const Mat img, const Size winSize, const int hopeThisLevel) {
 	const int width = img.cols;
 	const int height = img.rows;
@@ -22,6 +29,10 @@ int mycv::calcMaximumLevel(const Mat img, const Size winSize, const int hopeThis
 	return 0;
 }
 
+/*
+	영상을 maxLevel의 subimage로 만들기 용이하게 하기 위해
+	width, height를 (2^maxLevel)의 배수가 되게 함.
+*/
 Mat mycv::resizeForPyramid(const Mat src, const int maxLevel) {
 	const int rest = 1 << maxLevel;
 	const int width = src.cols - src.cols % rest;
@@ -38,9 +49,12 @@ Mat mycv::resizeForPyramid(const Mat src, const int maxLevel) {
 	return dest;
 }
 
+/*
+	width, height를 입력 영상 대비 1/2로 만든다.
+*/
 Mat mycv::makeNextLevelImage(const Mat src) {
-	const int width = src.cols / 2;
-	const int height = src.rows / 2;
+	const int width = src.cols >> 1;
+	const int height = src.rows >> 1;
 	const unsigned char* srcData = src.data;
 	
 	Mat dest = Mat::zeros(Size(width, height), src.type());
@@ -54,6 +68,9 @@ Mat mycv::makeNextLevelImage(const Mat src) {
 	return dest;
 }
 	
+/*
+	입력 영상의 각 픽셀마다 해당 픽셀의 상하, 좌우 미분값을 계산함
+*/
 void mycv::calcDerivatives(const Mat img, vector<double>& Ix, vector<double>& Iy) {
 	const int width = img.cols;
 	const int height = img.rows;
@@ -112,6 +129,13 @@ void mycv::calcOpticalFlowPyrLK(Mat prevImg, Mat nextImg,
 
 			guess += optFlowVector;
 
+			/*
+				추정된 점이 영상 밖으로 나가게 될 경우
+				이전 level에서 잘못 계산되었을 경우를 고려하여
+				guess를 초기화 한 후에 다시 optical flow를 계산
+				마지막 level에서 같은 현상 발생 시
+				해당 점은 추적할 수 없는것으로 판단
+			*/
 			if (L != 0) {
 				Point2f to = lFrom + guess;
 				if (0 <= to.x && to.x < img.cols && 0 <= to.y && to.y < img.rows) {
@@ -156,6 +180,10 @@ void mycv::calcOpticalFlowPyrLK(Mat prevImg, Mat nextImg,
 	}
 }
 
+/*
+	영상의 크기 변화 없이 Iterative Lucas-Kanade Optical Flow 알고리즘으로
+	원하는 픽셀(from)의 이동정보(flow vector)를 추정
+*/
 void mycv::calcOpticalFlowLK(Mat prevImg, Mat nextImg,
 	const vector<double>& Ix, const vector<double>& Iy,
 	const Point2f from, const Point2f guess, Point2f& optFlowVector,
@@ -167,6 +195,10 @@ void mycv::calcOpticalFlowLK(Mat prevImg, Mat nextImg,
 	const unsigned char* prevData = prevImg.data;
 	const unsigned char* nextData = nextImg.data;
 
+	/*
+		window 크기 내에서 영상의 gradient 행렬로
+		벡터 A = [ Ix, Iy ]에 대하여 A.transpose() * A로 계산
+	*/
 	double G[2][2] = {
 		{0, 0},
 		{0, 0}
@@ -194,6 +226,11 @@ void mycv::calcOpticalFlowLK(Mat prevImg, Mat nextImg,
 		{G[1][1] / det, -G[0][1] / det},
 	};
 
+	/*
+		다음 영상과의 비교를 통해 점의 이동을 추정
+		Iterative한 방법으로 이동량이 0에 수렴하게 되면 종료된다.
+		수렴하지 않는 경우에 maxCount까지 iteration이 수행되고 종료.
+	*/
 	for (int i = 0; i < criteria.maxCount; i++) {
 		Point2f mismatch(0, 0);
 
