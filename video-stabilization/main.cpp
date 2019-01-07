@@ -1,4 +1,21 @@
 /*
+
+
+
+
+
+
+본 소스코드는 http://nghiaho.com/?p=2093 를 기반으로 만들었으며,
+사용된 opencv 함수들을 직접 구현하였습니다.
+
+
+
+
+
+
+
+*/
+/*
 Copyright (c) 2014, Nghia Ho
 All rights reserved.
 
@@ -43,11 +60,12 @@ using namespace cv;
 // 5. Apply the new transformation to the video
 int main(int argc, char **argv)
 {
-	string inputPath = "hippo.mp4";
-
-	if (argc >= 2) {
-		inputPath = string(argv[1]);
+	if (argc < 2) {
+		cout << "파일 이름을 입력하세요" << endl;
+		return 0;
 	}
+
+	string inputPath = string(argv[1]);
 
 	// For further analysis
 	//ofstream out_transform("prev_to_cur_transformation.txt");
@@ -62,7 +80,7 @@ int main(int argc, char **argv)
 	Mat prev, prev_grey;
 
 	cap >> prev;
-	mycv::cvtColor(prev, prev_grey, COLOR_BGR2GRAY);
+	cv::cvtColor(prev, prev_grey, COLOR_BGR2GRAY);
 
 	// Step 1 - Get previous to current frame transformation (dx, dy, da) for all frames
 	vector <mycv::TransformParam> prev_to_cur_transform; // previous to current
@@ -78,7 +96,7 @@ int main(int argc, char **argv)
 			break;
 		}
 
-		mycv::cvtColor(cur, cur_grey, COLOR_BGR2GRAY);
+		cv::cvtColor(cur, cur_grey, COLOR_BGR2GRAY);
 
 		// vector from prev to cur
 		vector <Point2f> prev_corner, cur_corner;
@@ -222,12 +240,12 @@ int main(int argc, char **argv)
 
 		Mat cur2;
 
-		mycv::warpAffine(cur, cur2, T, cur.size(), 1, BORDER_REFLECT101);
+		cv::warpAffine(cur, cur2, T, cur.size(), 1, BORDER_REFLECT101);
 
 		cur2 = cur2(Range(vert_border, cur2.rows - vert_border), Range(HORIZONTAL_BORDER_CROP, cur2.cols - HORIZONTAL_BORDER_CROP));
 
 		// Resize cur2 back to cur size, for better side by side comparison
-		mycv::resize(cur2, cur2, cur.size());
+		cv::resize(cur2, cur2, cur.size());
 
 		// Now draw the original and stablised side by side for coolness
 		Mat canvas = Mat::zeros(cur.rows, cur.cols * 2 + 10, cur.type());
@@ -237,7 +255,7 @@ int main(int argc, char **argv)
 
 		// If too big to fit on the screen, then scale it down by 2, hopefully it'll fit :)
 		if (canvas.cols > 1920) {
-			mycv::resize(canvas, canvas, Size(canvas.cols / 2, canvas.rows / 2));
+			cv::resize(canvas, canvas, Size(canvas.cols / 2, canvas.rows / 2));
 		}
 
 		canvases.push_back(canvas.clone());
@@ -252,8 +270,6 @@ int main(int argc, char **argv)
 	/*
 	* 영상 반복 재생
 	* SPACE:		일시정지/재생
-	* 좌/우 방향키:	프레임 조절 (일시정지 후에 사용해)
-	* 상/하 방향키:	재생 속도 조절
 	*/
 	int n = 0;
 	int delay = 20;
@@ -265,27 +281,11 @@ int main(int argc, char **argv)
 		imshow("init", canvases[n]);
 		setWindowTitle("init", title);
 		
-		int key = waitKeyEx(delay);
+		int key = waitKey(delay);
 		switch (key) {
 		case KEY_SPACE:
 			isPaused = !isPaused;
 			break;
-		case KEY_LEFT:
-			n -= 1;
-			break;
-		case KEY_RIGHT:
-			n += 1;
-			break;
-		case KEY_UP:
-			delay -= 1;
-			fps = 1000.0 / delay;
-			break;
-		case KEY_DOWN:
-			delay += 1;
-			fps = 1000.0 / delay;
-			break;
-		default:
-			cout << key<< "," <<hex << key << endl;
 		}
 
 		if (!isPaused) {
